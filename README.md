@@ -7,6 +7,6 @@ Program expects 3 parameters - number of runs, selection coefficient, dominance 
 The program writes three result files: One for summary statistics, one with joint frequency spectrums for both populations and one for the sampled joined frequency spectrums for both populations.  
 
 ## Branches
-### Branches provide variations on the main program:
-Amorim2017 - version used in Amorim et al (2017).  
+Branches provide variations on the main program.
+### Amorim2017 - version used in Amorim et al (2017).  
 
