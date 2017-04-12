@@ -1,8 +1,3 @@
-//This code was used to run the simulations from Amorim et al. (2017) - The Population Genetics of Human Disease: The Case of Recessive Lethal Mutations
-//Modified by Eduardo Amorim (guerraamorim@gmail.com) from the original of Yuval Simons (see reference 1, Simons et al. 2014).
-
-#include <chrono>
-#include <random>
 #include <cstdlib>
 #include <iostream>
 #include <math.h>
@@ -14,31 +9,35 @@
 #include <sstream>
 #include <fstream>
 #include <string>
-#define tau 2040 
-#define taujump 5920 
-#define Urate 0.000000012 
-#define ratio 1  
+#define ln10 2.30258509
+#define SEL 0.0005
+#define SPLIT 1000
+#define Nzero 10000
+#define tau 2040
+#define taujump 5920
+//#define SEED 2710
+#define TAU 100
+#define Urate 0.0000000236//0.00000025
+#define ratio 1
 
-double lognormal();
-double Uvar;
-
-int nfinal,RUNS,Ntau=14474; 
+int nfinal,RUNS,Ntau=14474;
 double sel,DOM;
 
 using namespace std;
 
-struct freqs 
+struct freqs
 { 
   double freq0; 
   double freq1; 
 
-  freqs(const double a=0,const double b=0) :  
-    freq0(a),freq1(b) {}   
+  freqs(const double a=0,const double b=0) : 
+    freq0(a),freq1(b) {}
 };
 
 class valueComp 
 {
 public:
+
   bool operator()(const freqs& A,
           const freqs& B)
     const
@@ -55,45 +54,47 @@ int poi(double l);
 int poicond1(double l);
 int binom(int n, double p);
 int binom1(int n, double p);
-double lognormal();
+
 
 int main(int argc, char *argv[])
 {
-    int initgen=150000,stopover;  
-    double m=0.00015;  
-    if (argc==4) // User may run the script with "./a.out RUNS sel DOM", where RUNS = number of runs, sel = selective coefficient (in this work always set to 1), and DOM = heterozygote effect (in this work set to 0 or 1%)  
+    int initgen=150000,stopover;
+    double m=0.00015;    
+    if (argc==4)
        {RUNS=atoi(argv[1]);
        sel=atof(argv[2]);
-       DOM=atof(argv[3]); 
+       DOM=atof(argv[3]);
        }
-    else         // User may run the script with "./a.out" and the above mentioned parameters will be asked in the command line prompt.
+    else    
         {
-        cout<<"enter number of runs:";
+        cout<<"enter RUNS:";
         cin>>RUNS;
-        cout<<"enter selective coefficient:";
+        cout<<"enter sel:";
         cin>>sel;
-        cout<<"enter dominance:";
+        cout<<"enter dominace:";
         cin>>DOM;
         }
     stopover=RUNS;
-    cout<<"RUNS:"<<RUNS<<" tau:"<<tau<<" sel:"<<sel<<" initgen:"    
+    cout<<"RUNS:"<<RUNS<<" tau:"<<tau<<" sel:"<<sel<<" initgen:"
     <<initgen<<" stopover:"<<stopover<<" dominace:"<<DOM<<" m:"<<m<<"\n";
  
     BRand::Controller.seed(time(NULL));
     
-    population::initialize(sel,DOM); 
-    population* pops[2]; 
-    pops[0]= new population(popsize(0,0));
+    population::initialize(sel,DOM);
+    population* pops[2];
+    pops[0]= new population(popsize(0,0)); 
     pops[1]= new population(popsize(0,0));
 
-    int euroflag=0;  
+    int euroflag=0;
     double halftheta=2*popsize(initgen,0)*Urate; 
-    double p1=1./(1.+ratio*exp((2*popsize(initgen,0)-1)*sel)*(1-(2*DOM-1)*(2*popsize(initgen,0)-1)*sel*sel/(12*popsize(initgen,0))) ); 
+
+    double p1=1./(1.+ratio*exp((2*popsize(initgen,0)-1)*sel)*(1-(2*DOM-1)*(2*popsize(initgen,0)-1)*sel*sel/(12*popsize(initgen,0))) ); //Equilibrium proportion of sites fixed to the deleterious allele
+
     map<int,int> count[2],counts[2][2],countd[2],taucount,taucountd;
     map<freqs,int,valueComp> joint,joints[2],jointd;
 
     int gen,thispop;
-    double baseup=(1./halftheta); 
+    double baseup=(1./halftheta);
     double basedown=(1./(ratio*halftheta));
     double oneovertwoU=(1./(2*Urate));
     double oneovertwoUratio=(1./(2*Urate*ratio));
@@ -101,61 +102,65 @@ int main(int argc, char *argv[])
     int skip=0,stretch;
     time_t tt;
     struct tm *tim;
-    char library[70],comm[200],totalfile[200],totalres[200];
+    char library[200],comm[200],totalfile[200],totalres[200];
     double Ep,s1,S2N,Ep2,Ex,Exderived,s12,Ex2,Ex4,Dx,Dx2;
     double europ, euros1, eurox, euroS2N;
     int tauallele,before, after;
     freqs f;
     
-    ofstream myfile,results,afrDistrib,eurDistrib,mutDistribution;
+    ofstream myfile,results;
     
-    for(int run=0;run<RUNS;run++)  
-            {					  
+    for(int run=0;run<RUNS;run++)
+            {
             gen=initgen;
-            double Uvar = lognormal();
-            double halfthetaVAR = 2*popsize(initgen,0)*Uvar;
-            double baseupVAR = (1./halfthetaVAR);
-            
-            pops[0]->size=popsize(gen,0); //Initializing the population size for the beginning of each run with deleterious allele absent from the population
-
-                pops[0]->clear();
+            pops[0]->size=popsize(gen,0);//Initializing the population size for the beginning of each run
+            if (((run+0.5)/(RUNS))>p1)  //Initializing the population state as fixed for either the beneficial or the deleterious allele
+                {pops[0]->clear();
                 initialstate=0;
                 zeroruns++;
+                }
+            else
+                {pops[0]->fix();
+                initialstate=1;
+                oneruns++;
+                }
             
-            euroflag=0; //A flag indicating if the African-European population split has occured (0 = it hasn't occurred)
+            euroflag=0; //A flag indicating if a Af-Eur population split has occured
 
             while (gen>0)
                     {
-		      if (gen==tau) //tau is the generation of the out of Africa exodus (gen=2040) according to Tennessen et al (2012).
+		      if (gen==tau) //tau is the generation of the out of Africa exodus.
                     {
                         euroflag=1;
-                        *pops[1]=*pops[0]; 
-                        taucount[pops[0]->allelenum()]++; 
-                        if (initialstate==0)
-			  			taucountd[pops[0]->allelenum()]++; 
+                        *pops[1]=*pops[0]; //Creating the European population from the African population.
+                        taucount[pops[0]->allelenum()]++; //Keeping track of deleterious allele frequencies at the split for calculation of the change in frequency since the split
+                        if (initialstate==0) //Keeping track of derived allele frequencies at the split
+			  taucountd[pops[0]->allelenum()]++; 
                         else 
-                    	taucountd[2*pops[0]->size-pops[0]->allelenum()]++;
+                             taucountd[2*pops[0]->size-pops[0]->allelenum()]++;
                     }
-		      if (gen==920) m=0.000025; 
+		      if (gen==920) m=0.000025; //Reduced migration period
                     
-		      for(int i=0;i<(1+euroflag);i++) 
-                    { 
-		      if (((pops[i]->allelenum()>0)&&(pops[i]->allelenum()<(2*pops[i]->size)))||(gen<=taujump)) //If the allele is segregating or we are in recent history (last 5920 generations), introduce mutations
-                        {    
-                            pops[i]->mutateup(poi( Uvar*(2*pops[i]->size-pops[i]->allelenum()) )) ; 
+		      for(int i=0;i<(1+euroflag);i++) //For each population
+                    {
+
+		      if (((pops[i]->allelenum()>0)&&(pops[i]->allelenum()<(2*pops[i]->size)))||(gen<=taujump)) //If the allele is segregating or we are in recent history (last 5920 gens)
+                        {    //Introduce mutations
+                            pops[i]->mutateup(poi( Urate*(2*pops[i]->size-pops[i]->allelenum()) )) ; 
+                            pops[i]->mutatedown(poi(Urate*ratio*pops[i]->allelenum()));
                         }
-		      else if (pops[i]->allelenum()==0) //If the ancestral allele is fixed calculate when will the next deleterious allele appear and advance population state to that point in time (unless that point in time is in recent history; then just set time to initial history).
+		      else if (pops[i]->allelenum()==0) //If the beneficial allele is fixed calculate when will the next deleterious allele appear and advance population state to that point in time (unless that point in time is in recent history and then just set time to initial history).
                         {
-                             gen-=int(-log( BRand::Controller.nextOpened())*baseupVAR); 
+                             gen-=int(-log( BRand::Controller.nextOpened())*baseup);
                              if (gen<=taujump) 
-                                gen=taujump+1; 
+                                gen=taujump+1;
                              else
                                  {pops[i]->size=popsize(gen,i);
-                                 pops[i]->clear(); 
-                                 pops[i]->mutateup(poicond1(2*Uvar*pops[i]->size)); } 
+                                 pops[i]->clear();
+                                 pops[i]->mutateup(poicond1(2*Urate*pops[i]->size)); }
 
                         }    
-                        else if (pops[i]->allelenum()==(2*pops[i]->size))//If the deleterious allele is fixed calculate when will the next deleterious allele appear and advance population state to that point in time (unless that point in time is in recent history and then just set time to initial history). Note that with s = 1 this cannot happen
+                        else if (pops[i]->allelenum()==(2*pops[i]->size))//If the deleterious allele is fixed calculate when will the next deleterious allele appear and advance population state to that point in time (unless that point in time is in recent history and then just set time to initial history).
                         {
                              gen-=int(-log( BRand::Controller.nextOpened())*basedown);
                              if (gen<=taujump) 
@@ -163,33 +168,34 @@ int main(int argc, char *argv[])
                              else
                                  {pops[i]->size=popsize(gen,i);
                                  pops[i]->fix();
-                                 }
-                        }       
-                                       
+                                 pops[i]->mutatedown(poicond1(2*Urate*ratio*pops[i]->size));}
+                             
+                        }                      
 		      if (euroflag==0) //If a split between Af and Eur populations has occured apply migration
                            pops[i]->populate_from(pops[i]->prob(),popsize(gen-1,i));
                         else
                            pops[i]->populate_from((1-m)*(pops[i]->prob())+m*(pops[1-i]->prob()),popsize(gen-1,i)); 
+
                     }
                     
                                     
 		      gen--; //Next generation please
-}
+                   }
+
 	    //End of a run. Time for some statitics.
-	    
-          for(int i=0;i<2;i++) 
-	      {count[i][pops[i]->allelenum()]++; 
+            for(int i=0;i<2;i++) //For each population
+	      {count[i][pops[i]->allelenum()]++; //Add one to the count of deleterious allele copy number in this population
                 if (initialstate==0)
-                   {counts[i][initialstate][pops[i]->allelenum()]++; 
-                   countd[i][pops[i]->allelenum()]++;} 
+                   {counts[i][initialstate][pops[i]->allelenum()]++; //Add one to the count of derived  allele copy number given the initial fixed state  in this population
+                   countd[i][pops[i]->allelenum()]++;} //Add one to the count of derived leterious allele copy number in this population
                 else 
 		  {counts[i][initialstate][2*pops[i]->size-pops[i]->allelenum()]++;
                    countd[i][2*pops[i]->size-pops[i]->allelenum()]++;}
                }
-            f.freq0=double(pops[0]->allelenum())/(2*pops[0]->size); //Allele frequency in Africans
-            f.freq1=double(pops[1]->allelenum())/(2*pops[1]->size); //Allele frequency in Europeans
-            joint[f]++; 
-            if (initialstate==0) 
+            f.freq0=double(pops[0]->allelenum())/(2*pops[0]->size); //frequency in Africans
+            f.freq1=double(pops[1]->allelenum())/(2*pops[1]->size); //frequency in Europeans
+            joint[f]++; //Count the pairs of af freq and eur freq for del. allele
+            if (initialstate==0)  //Count the pairs of af freq and eur freq for derived allele
                  {joints[0][f]++;
                  jointd[f]++;}
             else 
@@ -198,28 +204,16 @@ int main(int argc, char *argv[])
                  joints[1][f]++;
                  jointd[f]++;}
             
-           	afrDistrib.open("afrDistrib.txt", ios::app);
-            afrDistrib<<f.freq0;
-            afrDistrib<<"\n";
-            afrDistrib.close();
-            
-			eurDistrib.open("eurDistrib.txt", ios::app);
-            eurDistrib<<f.freq1;
-            eurDistrib<<"\n";
-            eurDistrib.close();
-            
-			mutDistribution.open("mutDistribution.txt", ios::app);
-            mutDistribution<<Uvar;
-            mutDistribution<<"\n";
-            mutDistribution.close();
             
             if (((100*(run+1))%RUNS)==0) cout<<((100.0*(run+1))/RUNS)<<"%\n";              
 
-            if (((run+1)%stopover==0)||((run+1)==RUNS))  
+            if (((run+1)%stopover==0)||((run+1)==RUNS))  //If we finished running all the runs or we've set stopover points print statistics
             {
 
 	      time(&tt); //We use a time stamp to differentiate files in parallel computing
                 tim=localtime(&tt);
+		sprintf(comm, "mkdir %s","Tennessen");
+		system(comm);
                 sprintf(library, "Tennessen/regular");
                 sprintf(comm, "mkdir %s",library);
                 system(comm);
@@ -446,13 +440,10 @@ int main(int argc, char *argv[])
 }
 
 
-int popsize(int gen, int i)  // This version of the code generates an executable for running the simulations according to the Tennessen et al (2012) demography.
-{							 // In our paper, there were cases where we used different population sizes and demography. This is the place where changes were made to accomodate the differences between scenarios.
+int popsize(int gen, int i) //Calculates the size of population i (0=African, 1=European) at generation gen according to Tennessen et al's model
+{
     static double lam1=log(9300.0/1032)/(920-205);
     static double lam2=log(512000.0/9300)/205;  
-    //static double lam2=log(1024000.0/9300)/205;
-    //static double lam2=log(2048000.0/9300)/205;  
-    //static double lam2=log(5120000.0/9300)/205;  
     static double lambda=log(424000.0/Ntau)/205;
    
     if (gen>tau)
@@ -461,43 +452,21 @@ int popsize(int gen, int i)  // This version of the code generates an executable
        else
           return Ntau;
     else if (i==0)
-         if (gen>205) 
+         if (gen>205)
             return Ntau;
          else
-            return (int)round( Ntau*exp(lambda *(205-gen))); 
-    else 
-        if (gen>920) 
+            return (int)round( Ntau*exp(lambda *(205-gen)));
+    else
+        if (gen>920)
            return 1861;
         else if (gen>205)
            return (int)round( 1032*exp(lam1 *(920-gen)));
         else 
-           return (int)round( 9300*exp(lam2 *(205-gen))); 
+           return (int)round( 9300*exp(lam2 *(205-gen)));
 
 }
 
-double lognormal()
-{
-  
-  unsigned seed = std::chrono::system_clock::now().time_since_epoch().count();
-  
-  std::default_random_engine generator (seed);
-
-  // The following lines have to be uncommented or commented prior to compilation according to the type of mutation that is going to be simulated.
-  // There are 4 types (CpGti, CpGtv, nonCpGti and nonCpGtv) and the genomic average, based on Kong et al. (2012) - See Methods for detail
-  // We also apply the correction from Harpak et al. (2016) - See Methods for detail.
-  
-  //std::normal_distribution<double> distribution(-7.324836926,0.57); //CpGti 
-  //std::normal_distribution<double> distribution(-8.392236341,0.57); //CpGtv
-  //std::normal_distribution<double> distribution(-8.583066473,0.57); //nonCpGti 
-  //std::normal_distribution<double> distribution(-8.798867103,0.57); //nonCpGtv 
-  std::normal_distribution<double> distribution(-7.920818754,0.57); //average u 
-  
-  double u = distribution(generator);
-
-  return pow(10,u);
-}
-
-int poi(double l) //Regular Poisson random variate
+int poi(double l) //Regualr Poisson random variate
 {double p=1,expl=exp(-l);
 int k=0;
 while (p>=expl)
@@ -522,6 +491,8 @@ int binom(int n, double p) //binomial random variate generator
 { if (p<0.5) return binom1(n,p);
 else return  n-binom1(n,1-p);
 }
+
+
 
 int binom1(int n, double p) //binomial random variate generator
 {int x=0;
