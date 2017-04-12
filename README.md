@@ -1,5 +1,5 @@
 # ForwardSimulator
-## These is the code for the forward simulator from Simons et al (2014).
+### This is the code for the forward simulator from Simons et al (2014).
 ### Compiling: 
 g++ main.cpp population.cpp BRand.cpp
 ### Running:
