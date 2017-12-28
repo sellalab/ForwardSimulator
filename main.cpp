@@ -117,7 +117,7 @@ int main(int argc, char *argv[])
     
     time(&tt); //We use a time stamp to differentiate files in parallel computing
     tim=localtime(&tt);
-    sprintf(library, "infTennessen/regular");
+    sprintf(library, "infSchiffles/regular");
     sprintf(comm, "mkdir %s",library);
     system(comm);
     
@@ -126,7 +126,7 @@ int main(int argc, char *argv[])
     system(comm);
 
     		//Open results file
-    sprintf(totalfile, "%s/Tennessendata_sel%f_runs%d_%d_%d_%d.csv", library,log10(sel),RUNS, tim->tm_hour,tim->tm_min,tim->tm_sec);
+    sprintf(totalfile, "%s/Schifflesdata_sel%f_runs%d_%d_%d_%d.csv", library,log10(sel),RUNS, tim->tm_hour,tim->tm_min,tim->tm_sec);
     cout<<"opening "<<totalfile<<"\n";
     myfile.open (totalfile,std::fstream::out | std::fstream::app); //Data
     cout<<"opened "<<totalfile<<"\n";
@@ -214,7 +214,7 @@ int main(int argc, char *argv[])
 }
 
 
-int popsize(int gen, int i) //Calculates the size of population i (0=African, 1=European) at generation gen according to Tennessen et al's model
+int popsize(int gen, int i) //Calculates the size of population i (0=African, 1=European) at generation gen according to Schiffles & Durbin's model
 {
 
   if (gen<=T[idx]) idx-=1;
