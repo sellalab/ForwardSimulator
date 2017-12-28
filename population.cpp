@@ -7,13 +7,11 @@
 #include <iostream>
 #include <cstdlib>
 
-double population::s,population::h,population::hs;
+double population::s;
 
-void population::initialize(double sel, double dom)
+void population::initialize(double sel)
 {
 s=sel;
-h=dom;
-hs=h*s;                           
 }
 
 // class constructor
@@ -69,7 +67,8 @@ void population::fix()
 
 double population::prob()
 {
-       return (alleleholders[0]+(1.-hs)*alleleholders[1]*0.5)/(alleleholders[0]+(1.-hs)*alleleholders[1]+(1.-s)*alleleholders[2]);
+    double q=(alleleholders[0]+alleleholders[1]*0.5)/size;
+    return q-s*q*(1-q)*(0.5-q);
 }
 
 void population::populate_from(population &p, int N)
@@ -99,6 +98,11 @@ void population::populate_from(double prob, int N)
 int population::allelenum()
 {
 return (alleleholders[1]+2*alleleholders[2]);
+}
+
+double  population::freq()
+{
+return (0.5*alleleholders[1]+alleleholders[2])/size;
 }
 
 int population::binom(int n, double p)

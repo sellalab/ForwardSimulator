@@ -8,7 +8,7 @@ class population
 	public:
 		// class constructor
 		population(int N);
-		static void initialize(double sel, double dom);//set selection and dominance coefficients
+		static void initialize(double sel);//set selection and dominance coefficients
 		void populate_from(population &p, int N=0);//create next generation
 		void populate_from(double prob, int N=0);//create next generation
 		int choose_allele();//choose an alleleic state (homo beneficial, hetero or homo deleterious) from the population. I think this function isn't actually used anywhere anymore. 
@@ -16,7 +16,8 @@ class population
 		int alleleholders[3]; //vector of the three classes of the pop: homo beneficial, hetero and homo deleterious
       
 		~population();  // class destructor
-		double frequency; 
+	        
+		double freq();//reutrn frequency
 		double prob();//Expected frequency of deleterious allele post selection
 		void mutateup(int n);// n deleterious mutations occur
 		void mutatedown(int n);// n beneficial mutations occur
@@ -30,8 +31,8 @@ class population
 	private:
 
             static double s;
-            static double h;
-            static double hs;
+            //static double h;
+            //static double hs;
 
      		            
 };

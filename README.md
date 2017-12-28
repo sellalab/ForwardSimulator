@@ -8,5 +8,6 @@ The program writes three result files: One for summary statistics, one with join
 
 ## Branches
 Branches provide variations on the main program.
-### Amorim2017 - version used in Amorim et al (2017).  
+### Amorim2017 - version used in Amorim et al (2017).
+### Simons2018 - version used in Simons et al (2018).  
 
