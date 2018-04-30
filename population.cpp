@@ -7,6 +7,8 @@
 #include <iostream>
 #include <cstdlib>
 
+#define PI 3.141592654
+
 double population::s;
 
 void population::initialize(double sel)
@@ -105,7 +107,7 @@ double  population::freq()
 return (0.5*alleleholders[1]+alleleholders[2])/size;
 }
 
-int population::binom(int n, double p)
+/*int population::binom(int n, double p)
 {int x=0;
 double y=0,c=log(1-p);
 if (c==0)
@@ -117,6 +119,54 @@ while (1)
     if (y>n) return x;    
     x++;    
     } 
+}*/
+int population::binom(int n, double pp)
+{
+int j;
+static int nold=(-1);
+double am,em,g,angle,p,bnl,sq,t,y;
+static double pold=(-1.0),pc,plog,pclog,en,oldg;
+p=(pp <= 0.5 ? pp : 1.0-pp);
+am=n*p;
+if (n < 25) 
+  {bnl=0.0;
+  for (j=1;j<=n;j++)
+  if (BRand::Controller.nextOpened() < p) ++bnl; } 
+ else if (am < 1.0) //Note to self: tried to change this 1.0 limit. Simulation perofrmance not senstive to small changes, eg 3.0. 
+  {g=exp(-am);
+   t=1.0;
+   for (j=0;j<=n;j++) 
+      {t *= BRand::Controller.nextOpened();
+      if (t < g) break;}
+   bnl=(j <= n ? j : n); } 
+else 
+  {if (n != nold) 
+     { en=n;
+       oldg=lgamma(en+1.0); //was gammaln
+     nold=n;} 
+  if (p != pold) 
+     {pc=1.0-p;
+     plog=log(p);
+     pclog=log(pc);
+     pold=p;} 
+  sq=sqrt(2.0*am*pc); 
+  do 
+     {do 
+        {angle=PI*BRand::Controller.nextOpened();
+        y=tan(angle);
+        em=sq*y+am;
+        } 
+     while (em < 0.0 || em >= (en+1.0));
+     em=floor(em); 
+     t=1.2*sq*(1.0+y*y)*exp(oldg-lgamma(em+1.0)-lgamma(en-em+1.0)+em*plog+(en-em)*pclog);//was gammaln
+     // exp(oldg-gammln(em+1.0)-gammln(en-em+1.0)+em*plog+(en-em)*pclog) is p(em|n,p) and acts as the target PDF for em which a continuous variable. Therefore floor(em) is distributed binomially.
+     // sq*(1.0+y*y) is the actual PDF from which we're drawing em and we're using acception/rejection to get the target PDF.
+   } 
+   while ( BRand::Controller.nextOpened() > t); 
+   bnl=em;
+   }
+if (p != pp) bnl=n-bnl; 
+return (int) bnl;
 }
 
  

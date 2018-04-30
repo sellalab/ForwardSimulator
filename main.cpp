@@ -21,7 +21,7 @@
 #define ratio 1
 
 int nfinal,RUNS,Ntau=14448;
-ind idx=0;
+int idx=0;
 double sel;
 
 int Ne[56]= {14448,14068,14068,14464,14464,15208,15208,16256,16256,17618,17618,19347,19347,21534,21534,24236,24236,27367,27367,30416,30416,32060,32060,31284,29404,26686,23261,18990,16490,16490,12958,12958,9827,9827,7477,7477,5791,5791,4670,4670,3841,3841,3372,3372,3287,3359,3570,4095,4713,5661,7540,11375,14310,13292,14522,613285};
@@ -117,6 +117,8 @@ int main(int argc, char *argv[])
     
     time(&tt); //We use a time stamp to differentiate files in parallel computing
     tim=localtime(&tt);
+    sprintf(library, "infSchiffles");
+    sprintf(comm, "mkdir %s",library);
     sprintf(library, "infSchiffles/regular");
     sprintf(comm, "mkdir %s",library);
     system(comm);
@@ -127,16 +129,16 @@ int main(int argc, char *argv[])
 
     		//Open results file
     sprintf(totalfile, "%s/Schifflesdata_sel%f_runs%d_%d_%d_%d.csv", library,log10(sel),RUNS, tim->tm_hour,tim->tm_min,tim->tm_sec);
-    cout<<"opening "<<totalfile<<"\n";
-    myfile.open (totalfile,std::fstream::out | std::fstream::app); //Data
-    cout<<"opened "<<totalfile<<"\n";
+    //cout<<"opening "<<totalfile<<"\n";
+    //myfile.open (totalfile,std::fstream::out | std::fstream::app); //Data
+    //cout<<"opened "<<totalfile<<"\n";
     
     for(int run=0;run<RUNS;run++)
             {
+	    idx=0; 
             gen=initgen;
             pops[0]->size=popsize(gen,0);//Initializing the population size for the beginning of each run
 	    pops[0]->clear();
-
             
             euroflag=0; //A flag indicating if a Af-Eur population split has occured
 
@@ -165,7 +167,7 @@ int main(int argc, char *argv[])
 		      for(int i=0;i<(1+euroflag);i++) //For each population
                       {
 
-		      if (((pops[i]->allelenum()>0)&&(pops[i]->allelenum()<(2*pops[i]->size)))||(gen<=taujump)) //If the allele is segregating or we are in recent history (last 5920 gens)
+		      if (((pops[i]->allelenum()>0)&&(pops[i]->allelenum()<(2*pops[i]->size)))||(gen<=taujump)) //If the allele is segregating or we are in recent history (for Schiffles model, recent history is 56000 gens ago)
                         {    //Introduce mutations
                             pops[i]->mutateup(poi( Urate*(2*pops[i]->size-pops[i]->allelenum()) )) ; 
                             pops[i]->mutatedown(poi(Urate*ratio*pops[i]->allelenum()));
@@ -184,19 +186,24 @@ int main(int argc, char *argv[])
                                  pops[i]->mutateup(poicond1(2*Urate*pops[i]->size)); }
 
                         }    
-                      
+ 
 		      if (euroflag==0) //If a split between Af and Eur populations has occured apply migration
                            pops[i]->populate_from(pops[i]->prob(),popsize(gen-1,i));
                         else
                            pops[i]->populate_from((1-m)*(pops[i]->prob())+m*(pops[1-i]->prob()),popsize(gen-1,i)); 
 
                     }
-                    
-                                    
+		     
+                                   
 		      gen--; //Next generation please
                    }
 
-	    if ((pops[1]->freq()+pops[0]->freq())!=0) myfile<<age<<","<<pops[0]->freq()<<","<<0<<","<<0<<"\n"; //write results of run
+	    if (pops[0]->freq()!=0) 
+	      { myfile.open (totalfile,std::fstream::out | std::fstream::app);
+		myfile<<age<<","<<pops[0]->freq()<<"\n"; //write results of run
+		myfile.close();
+	      }
+	    //if ((pops[1]->freq()+pops[0]->freq())!=0) myfile<<age<<","<<pops[0]->freq()<<","<<0<<","<<0<<"\n"; //write results of run
             
             if (((100*(run+1))%RUNS)==0) cout<<((100.0*(run+1))/RUNS)<<"%\n";              
 
@@ -206,18 +213,18 @@ int main(int argc, char *argv[])
     delete pops[1];
     cout<<"deleted pops\n";
     
-    cout<<"file closing\n";
-    myfile.close();
-    cout<<"file closed\n";
+    //cout<<"file closing\n";
+    //myfile.close();
+    //cout<<"file closed\n";
 
     return EXIT_SUCCESS;
 }
 
 
-int popsize(int gen, int i) //Calculates the size of population i (0=African, 1=European) at generation gen according to Schiffles & Durbin's model
+int popsize(int gen, int i) //Calculates the population size of Europeans at generation gen according to Schiffles & Durbin's model
 {
 
-  if (gen<=T[idx]) idx-=1;
+  if ((gen==T[idx])&&(idx<55)) idx+=1;
   return Ne[idx];
 
 
@@ -228,7 +235,7 @@ int poi(double l) //Regualr Poisson random variate
 {double p=1,expl=exp(-l);
 int k=0;
 while (p>=expl)
-{k++;
+  {k++;
 p=p*BRand::Controller.nextClosed();
 }
 return k-1;
